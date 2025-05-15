@@ -137,6 +137,27 @@ ggplot(avg_cal_yield, aes(x = reorder(crop, -value), y = value, fill = area)) +
 # ggsave("crop.png", plot1, bg = NULL, height = 14, width = 12)
 ```
 
+```{r}
+## Looking at crops other than potatoes, reference only
+avg_cal_yield %>%
+  filter(crop != "Potatoes") %>%
+ggplot(aes(x = reorder(crop, -value), y = value, fill = area)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "2022 Crop Yield in Selected South East Asian Countries",
+    x = "",
+    y = "Yield (kg/ha)",
+    fill = "Country"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(values = rev(wes_palette("Cavalcanti1"))) +
+  theme(text = element_text(size = 24))
+```
+
+## Results part 1
+Here, we can see that Myanmar and the Philippines produce a substantial amount of potatoes compared to the other countries. This is likely due to these countries having cool, highland regions that are optimal for potato cultivation. Philippines leads again when looking at rice production, although Nepal and Cambodia have similar yields. Interestingly, Thailand has the least amount of rice yield despite it being heavily marketed. OVerall, Nepal has the most yield compared to the other countries, leading the wheat and millet crops while still being a top producer for rice.
+
+
 ## Connect to database
 
 ```{r}
@@ -181,7 +202,7 @@ yield_cal_df <- yield_cal_df %>%
     harvest_end_date = mdy(paste0(harvest_end_date, "/2022")),
     
     
-    # Move harvest date to after plant date
+    # Move harvest date to after plant date. Assumption that harvest is AFTER planting to fix plot confusion
     harvest_start_date = if_else(harvest_start_date < plant_start_date,
                                 harvest_start_date + years(1),
                                 harvest_start_date),
@@ -191,6 +212,7 @@ yield_cal_df <- yield_cal_df %>%
                               harvest_end_date)
   ) %>%
   ggplot() +
+  
   # Planting period
   geom_segment(aes(x = plant_start_date, xend = plant_end_date, y = area, yend = area),
                color = "#33a02c", size = 4) +
@@ -207,7 +229,7 @@ yield_cal_df <- yield_cal_df %>%
 
 # ggsave("timeline.png", plot2, width = 12, height = 8)
 ```
-
+Here, we look at the average planting and harvesting times for the four rice producing countries. There are intersting patterns here, which may be due to how data was handled. Thailand seems to have the most relatively even planting and harvest period. The Philippines has a relatively short planting period and an extended harvest period, while Cambodia has the opposite. 
 ```{r, message=FALSE, warning=FALSE}
 # Close connection
 DBI::dbDisconnect(conn, shutdown= TRUE)
