@@ -1,0 +1,211 @@
+---
+title: "Yield_planting_exploration_sea"
+Author: Michelle Yiv
+format: html
+embed-resources: true
+---
+
+## Setup
+
+```{r, message=FALSE, warning=FALSE}
+# Load libraries
+library(tidyverse)
+library(here)
+library(janitor)
+library(dbplyr)
+library(duckdb)
+library(DBI)
+library(wesanderson)
+```
+
+```{r, message=FALSE}
+# Read in data
+calendar <- read_csv(here('data', 'crop_yields.csv')) 
+yield <- read_csv(here('data','FAOSTAT_data_en_4-1-2025 (1).csv'))
+```
+
+## Data exploration and cleaning
+
+```{r}
+# View column names for crop yields
+#colnames(yield)
+
+# Note that there are periods instead of underscores
+# Possibly join on Area/Location column? Different naming conventions for some area Viet nam vs. Vietnam(South)
+```
+
+```{r}
+# View column names for crop calendar
+#colnames(calendar)
+```
+
+```{r}
+# Data cleaning for calendar
+
+calendar_cleaned <- calendar %>%
+  
+  # Rename to match with yield dataset
+  rename(Area = Location) %>%
+  
+  clean_names()
+
+# Replace . in column names to _
+names(calendar_cleaned) <- ifelse(str_detect(names(calendar_cleaned), "\\."),
+                    str_replace_all(names(calendar_cleaned), "\\.", "_"),
+                    names(calendar_cleaned))
+```
+
+```{r}
+# Cleaning for crop yield
+
+yield_cleaned <- yield %>%
+  
+  # Rename area code column for clarity
+  rename(area_code = `Area Code (M49)`) %>%
+  
+  # Rename item code column for clarity
+  rename(item_code = `Item Code (CPC)`) %>%
+  
+  # Change to lowercase
+  clean_names() 
+```
+
+### Focus on planting and harvesting ranges, items, and yield by South East Asian countries
+
+```{r}
+# Referring to schema diagram, select columns of interest
+
+calendar_table <- calendar_cleaned %>%
+  select(c("data_id", "area", "crop","plant_start_date", "plant_end_date", "plant_range", "harvest_start_date", "harvest_end_date", "harvest_range"))
+
+yield_table <- yield_cleaned %>%
+  select(c("item", "item_code", "value", "unit", "year", "element", "area")) %>%
+  filter(element == "Yield")
+
+country_table <- yield_cleaned %>%
+  select(c("area_code", "area"))
+```
+
+```{r}
+yield_table_sea <- yield_table %>%
+  filter(area %in% c("Malaysia", "Indonesia", "Laos", "Myanmar", "Singapore", "Cambodia", "Philippines", "Thailand", "Brunei", "East Timor", "Vietnam", "Nepal")) %>%
+  filter(year == 2022) %>% 
+  rename(crop = item)
+  
+calendar_table_sea <- calendar_table %>%
+  filter(area %in% c("Malaysia", "Indonesia", "Laos", "Myanmar", "Singapore", "Cambodia", "Philippines", "Thailand", "Brunei", "East Timor", "Vietnam", "Nepal"))
+```
+
+```{r}
+# Save to CSV
+# write.csv(yield_table_sea, file = "yield.csv", row.names = FALSE)
+# write.csv(calendar_table_sea, file = "calendar.csv", row.names = FALSE)
+```
+
+```{r, message=FALSE}
+# Find average for planting and harvest ranges
+calendar_table_sea_avg <- calendar_table_sea %>%
+  group_by(area, crop) %>%
+  summarize(
+    avg_plant_range = mean(plant_range, na.rm = TRUE),
+    avg_harvest_range = mean(harvest_range, na.rm = TRUE)
+  ) %>%
+  ungroup()
+```
+
+```{r}
+# Join tables
+avg_cal_yield <- left_join(calendar_table_sea_avg, yield_table_sea, by = c("crop", "area")) %>%
+  drop_na()
+
+```
+
+```{r}
+# Visualization 
+ggplot(avg_cal_yield, aes(x = reorder(crop, -value), y = value, fill = area)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "2022 Crop Yield in selected South East Asian Countries",
+    x = "",
+    y = "Yield (kg/ha)",
+    fill = "Country"
+  ) +
+  theme_minimal() +
+  scale_fill_manual(values = rev(wes_palette("Cavalcanti1")))
+
+```
+
+## Connect to database
+
+```{r}
+# Connect to database
+conn <- DBI::dbConnect(duckdb::duckdb(), dbdir="database.db")
+
+# Ensure tables are present
+DBI::dbListTables(conn)
+```
+
+```{r}
+# Look at tables
+calendar_db <- tbl(conn, "calendar")
+yield_db <- tbl(conn, "yield")
+
+#calendar_db
+#yield_db
+```
+
+```{r}
+# Join tables
+yield_cal_df <- left_join(calendar_db, yield_db, by=c("area", "crop")) %>%
+  collect()
+
+# Drop NA values
+yield_cal_df <- yield_cal_df %>%
+  drop_na() ## These are from having planting information but no yield information. Since we focus on rice, we can drop these values.
+```
+
+```{r}
+# Visualize planting and harvest times for rice
+
+yield_cal_df %>%
+  filter(crop == "Rice") %>%
+  mutate(
+    
+    # Add years to dates
+    plant_start_date = mdy(paste0(plant_start_date, "/2022")),
+    plant_end_date = mdy(paste0(plant_end_date, "/2022")),
+    
+
+    harvest_start_date = mdy(paste0(harvest_start_date, "/2022")),
+    harvest_end_date = mdy(paste0(harvest_end_date, "/2022")),
+    
+    
+    # Move harvest date to after plant date
+    harvest_start_date = if_else(harvest_start_date < plant_start_date,
+                                harvest_start_date + years(1),
+                                harvest_start_date),
+    
+    harvest_end_date = if_else(harvest_end_date < plant_start_date,
+                              harvest_end_date + years(1),
+                              harvest_end_date)
+  ) %>%
+  ggplot() +
+  # Planting period
+  geom_segment(aes(x = plant_start_date, xend = plant_end_date, y = area, yend = area),
+               color = "#33a02c", size = 4) +
+  # Harvest period
+  geom_segment(aes(x = harvest_start_date, xend = harvest_end_date, y = area, yend = area),
+               color = "#fdbf6f", size = 4) +
+  labs(
+    title = "Rice Planting & Harvest Periods by Country (2022-2023)",
+    x = "Date",
+    y = "Country"
+  ) +
+  theme_minimal() + scale_x_date(date_breaks = "1 month", date_labels = "%b %d")
+
+```
+
+```{r}
+# Close connection
+DBI::dbDisconnect(conn, shutdown= TRUE)
+```
