@@ -43,13 +43,12 @@ JOIN calendar_avg
 SELECT * FROM temp_calendar_yield;
 
 -- make new table and save to database
-
 CREATE TABLE crop_summary AS
 SELECT
   crop,
   area,
 ANY_VALUE(avg_plant_range) as avg_plant_range,
- ANY_VALUE(avg_harvest_range) as avg_harvest_range,
+ANY_VALUE(avg_harvest_range) as avg_harvest_range,
   AVG(value) AS avg_yield,
 FROM temp_calendar_yield
 GROUP BY crop, area

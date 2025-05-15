@@ -122,17 +122,19 @@ avg_cal_yield <- left_join(calendar_table_sea_avg, yield_table_sea, by = c("crop
 
 ```{r}
 # Visualization 
-ggplot(avg_cal_yield, aes(x = reorder(crop, -value), y = value, fill = area)) +
+plot1 <- ggplot(avg_cal_yield, aes(x = reorder(crop, -value), y = value, fill = area)) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(
-    title = "2022 Crop Yield in selected South East Asian Countries",
+    title = "2022 Crop Yield in Selected South East Asian Countries",
     x = "",
     y = "Yield (kg/ha)",
     fill = "Country"
   ) +
   theme_minimal() +
-  scale_fill_manual(values = rev(wes_palette("Cavalcanti1")))
+  scale_fill_manual(values = rev(wes_palette("Cavalcanti1"))) +
+  theme(text = element_text(size = 24))
 
+ggsave("crop.png", plot1, bg = NULL, height = 14, width = 12)
 ```
 
 ## Connect to database
@@ -167,7 +169,7 @@ yield_cal_df <- yield_cal_df %>%
 ```{r}
 # Visualize planting and harvest times for rice
 
-yield_cal_df %>%
+plot2 <- yield_cal_df %>%
   filter(crop == "Rice") %>%
   mutate(
     
@@ -201,8 +203,10 @@ yield_cal_df %>%
     x = "Date",
     y = "Country"
   ) +
-  theme_minimal() + scale_x_date(date_breaks = "1 month", date_labels = "%b %d")
+  theme_minimal() + scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  theme(text = element_text(size = 24))
 
+ggsave("timeline.png", plot2, width = 12, height = 8)
 ```
 
 ```{r}
