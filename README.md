@@ -2,15 +2,12 @@
 
 ### Author: Michelle Yiv
 
-## Purpose
 
 ![](https://d20knvk822eu5a.cloudfront.net/s3fs-public-optimized/2024-01/Mekong_Biking%20Excursion_10_0.jpg.webp)
 
-This repository showcases practice with SQL, DuckDB, and R for creating and managing databases, handling multiple datasets, and writing queries as part of UCSB's Bren School of Environmental Science Master of Data Science Program, EDS213 Databases and Data Management.
+## Purpose
 
-Datasets from the FAO and SAGE were combined to determine average crop yields (kg/ha), planting, and harvest dates for South East Asian Countries.
-
-The documents in the repository show how to load and clean the data, add to a database, and develop the query to answer these questions.
+This repository showcases practice with SQL, DuckDB, and R for creating and managing databases, handling multiple datasets, and writing queries as part of UCSB's Bren School of Environmental Science Master of Data Science Program, EDS213 Databases and Data Management. Datasets from the FAO and SAGE were combined to determine average crop yields (kg/ha), planting, and harvest dates for South East Asian Countries. The documents in the repository show how to load and clean the data, add to a database, and develop the query to answer these questions.
 
 
 ## Repository structure
